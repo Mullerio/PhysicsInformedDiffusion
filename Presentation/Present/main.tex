@@ -1,0 +1,86 @@
+\documentclass[10pt]{beamer}
+\usetheme{Boadilla} %CHANGE THIS FOR DIFFERENT COLOR ETC.
+\usepackage{xcolor, soul}
+\sethlcolor{red}
+\usepackage[absolute,overlay]{textpos}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{dsfont}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning}
+\usepackage[style=alphabetic]{biblatex}  
+\addbibresource{lib.bib}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+\usepackage{comment}
+
+\newtheoremstyle{reminder}% Custom style for reminders
+  {3pt} % Space above
+  {3pt} % Space below
+  {\itshape} % Body font
+  {} % Indent amount
+  {\bfseries\color{blue}} % Theorem head font
+  {.} % Punctuation after theorem head
+  {.5em} % Space after theorem head
+  {} % Theorem head spec (can be left empty, meaning `normal`)
+
+\theoremstyle{reminder}
+\newtheorem{reminder}{Reminder}
+
+\author[Jonas Müller]{Jonas Müller}
+
+\setbeamertemplate{enumerate item}{\arabic{enumi}.}  % Use regular numbers and a period
+
+%%%%%%%%%%%%%%%%%% Begin of the Presentation %%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\title[Physics Informed Diffusion Models]{Physics Informed Diffusion Models}
+\institute{}
+\date{}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+%%%%%%%%%%%%%%%%%% Outline %%%%%%%%%%%%%%%%%%%%%
+\section{Recap Diffusion Models}
+
+\section{Physics Informed Diffusion Models}
+
+\begin{frame}
+    \frametitle{Outline}
+    \tableofcontents
+\end{frame}
+
+%%%%%%%%%%%%%%%%%% Beginning of slides %%%%%%%%%%%%%%%%%
+
+\begin{frame}{Recap Diffusion Models}
+    \begin{itemize}
+        \item First point
+        \item Second point
+        \item Third point
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Physics Informed Diffusion Models}
+    \begin{definition}
+        Add your definition here.
+    \end{definition}
+    
+    \begin{theorem}
+        State your theorem here.
+    \end{theorem}
+\end{frame}
+
+\begin{frame}{Example Slide}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{images/example.png}
+    \end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%% End of Presentation %%%%%%%%%%%%%%%%%
+
+\end{document}
