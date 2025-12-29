@@ -1,0 +1,27 @@
+device:
+  use_cuda: true
+  device_id: 0
+
+optimizer:
+  name: adamw
+
+training:
+  epochs: 10
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  batch_size: 1024
+
+scheduler:
+  name: cosine
+
+logging:
+  log_freq: 100
+  save_freq: 50
+
+wandb:
+  enabled: false
+  project: physics-informed-diffusion
+
+diffusion:
+  num_timesteps: 1000
+  schedule: linear
