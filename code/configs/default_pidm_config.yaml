@@ -25,3 +25,7 @@ wandb:
 diffusion:
   num_timesteps: 1000
   schedule: linear
+  
+model: 
+  type: unet
+  prediction_type: eps

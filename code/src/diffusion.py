@@ -14,6 +14,7 @@ class DiffusionSampler:
         model: nn.Module,
         diffusion_schedule: DiffusionSchedule,
         device: torch.device,
+        pred_type: str = "eps",  # "eps" or "x0"
     ):
         """
         Args:
@@ -25,7 +26,8 @@ class DiffusionSampler:
         self.diffusion_schedule = diffusion_schedule
         self.device = device
         self.model.eval()
-    
+        self.pred_type = pred_type
+            
     @torch.no_grad()
     def sample_ddpm(
         self,
@@ -57,7 +59,10 @@ class DiffusionSampler:
             
             # Model prediction
             predicted_noise = self.model(x_t, t)
-            predicted_noise = torch.clamp(predicted_noise, -10.0, 10.0)
+            if self.pred_type == "x0":
+                # If model predicts x_0 directly
+                x_0_pred = predicted_noise
+                predicted_noise = (x_t - self.diffusion_schedule.get_sqrt_alphas_cumprod(t) * x_0_pred) / self.diffusion_schedule.get_sqrt_one_minus_alphas_cumprod(t)
             
             # Get alphas
             alpha_bar_t = self.diffusion_schedule.alphas_cumprod[t_idx].item()
@@ -69,7 +74,6 @@ class DiffusionSampler:
             
             # Predict x_0
             x_0_pred = (x_t - sqrt_one_minus_alpha_bar_t * predicted_noise) / sqrt_alpha_bar_t
-            x_0_pred = torch.clamp(x_0_pred, -20.0, 20.0)
             
             # Get posterior variance
             posterior_var = self.diffusion_schedule.get_posterior_var(torch.tensor(t_idx, device=self.device))
@@ -90,9 +94,7 @@ class DiffusionSampler:
             else:
                 # Last step: just use the predicted x_0
                 x_t = x_0_pred
-            
-            x_t = torch.clamp(x_t, -20.0, 20.0)
-            
+                        
             # Check for NaN
             if torch.isnan(x_t).any():
                 print(f"NaN at step {i}/{len(timesteps)}, replacing with previous estimate")
@@ -133,8 +135,8 @@ class DiffusionSampler:
             # Get previous timestep
             t_prev_idx = timesteps[i + 1] if i < len(timesteps) - 1 else torch.tensor(-1)
             
-            # Model predicts noise
-            predicted_noise = self.model(x_t, t)
+            # Model predicts noise or x0
+            model_output = self.model(x_t, t)
             
             # Get coefficients
             alpha_bar_t = self.diffusion_schedule.alphas_cumprod[t_idx.item()]
@@ -143,8 +145,15 @@ class DiffusionSampler:
                 if t_prev_idx >= 0 else torch.tensor(1.0, device=self.device)
             )
             
-            # Predict x_0
-            x_0_pred = (x_t - (1 - alpha_bar_t).sqrt() * predicted_noise) / alpha_bar_t.sqrt()
+            # Convert prediction to noise if needed
+            if self.pred_type == "x0":
+                # model_output is x0 prediction, get noise 
+                x_0_pred = model_output
+                predicted_noise = (x_t - alpha_bar_t.sqrt() * x_0_pred) / (1 - alpha_bar_t).sqrt()
+            else:
+                # model_output is noise prediction, get the x0 pred 
+                predicted_noise = model_output
+                x_0_pred = (x_t - (1 - alpha_bar_t).sqrt() * predicted_noise) / alpha_bar_t.sqrt()
             
             # Direction pointing to x_t
             direction = (1 - alpha_bar_t_prev).sqrt() * predicted_noise

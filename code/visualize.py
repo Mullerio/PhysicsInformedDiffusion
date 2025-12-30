@@ -115,7 +115,8 @@ def visualize_mnist_generation(
     num_samples: int = 16, 
     num_steps: int = 100, 
     method: str = "ddim",
-    save_path: str = None
+    save_path: str = None,
+    pred_type: str = "eps"
 ):
     """
     Generate and visualize MNIST samples using a trained U-Net diffusion model.
@@ -130,6 +131,7 @@ def visualize_mnist_generation(
     # Load configuration
     config = load_config('configs/default_pidm_config.yaml')
     
+    config['model']['prediction_type'] = pred_type
     # Initialize U-Net model for MNIST
     model = SimpleUNet(in_channels=1, out_channels=1, time_embed_dim=128)
     
@@ -141,7 +143,7 @@ def visualize_mnist_generation(
     trainer.load_checkpoint(checkpoint_path)
     
     # Create sampler
-    sampler = DiffusionSampler(model, trainer.diffusion_schedule, trainer.device)
+    sampler = DiffusionSampler(model, trainer.diffusion_schedule, trainer.device, pred_type=pred_type)
     
     # Generate samples - shape is (batch, channels, height, width)
     shape = (num_samples, 1, 28, 28)
@@ -345,6 +347,12 @@ if __name__ == "__main__":
         default=None,
         help="Path to save visualization (optional)"
     )
+    parser.add_argument(
+        "--pred_type",
+        type=str,
+        choices=["eps", "x0"],
+        help="Prediction type for MNIST generation (eps or x0)"
+    )
     
     args = parser.parse_args()
     
@@ -355,7 +363,8 @@ if __name__ == "__main__":
                 num_samples=args.num_samples,
                 num_steps=args.num_steps,
                 method=args.method,
-                save_path=args.save
+                save_path=args.save,
+                pred_type=args.pred_type
             )
         else:
             visualize_mnist_generation(
@@ -363,7 +372,8 @@ if __name__ == "__main__":
                 num_samples=args.num_samples,
                 num_steps=args.num_steps,
                 method=args.method,
-                save_path=args.save
+                save_path=args.save,
+                pred_type=args.pred_type
             )
     else:
         visualize_samples(

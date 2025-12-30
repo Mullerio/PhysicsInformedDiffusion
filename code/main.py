@@ -57,6 +57,7 @@ def train_mnist(
     num_epochs: int = 10,
     learning_rate: float = 1e-3,
     data_path: str = "data",
+    pred_type: str = "eps",
     val_split: float = 0.1,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
@@ -83,6 +84,7 @@ def train_mnist(
     config['training']['batch_size'] = batch_size
     config['training']['epochs'] = num_epochs
     config['training']['learning_rate'] = learning_rate
+    config['model']['prediction_type'] = pred_type
     config['device']['use_cuda'] = device == 'cuda'
     
     # Initialize U-Net model for MNIST (1 channel input/output, 28x28 images)
@@ -159,6 +161,8 @@ if __name__ == "__main__":
                        help='Learning rate for optimizer')
     parser.add_argument('--data-path', type=str, default='data', 
                        help='Path to store/load datasets')
+    parser.add_argument('--pred_type', type=str, default='eps',
+                        choices=['eps', 'x0'])
     
     args = parser.parse_args()
     
@@ -167,7 +171,8 @@ if __name__ == "__main__":
             batch_size=args.batch_size,
             num_epochs=args.num_epochs,
             learning_rate=args.learning_rate,
-            data_path=args.data_path
+            data_path=args.data_path,
+            pred_type=args.pred_type    
         )
     else:
         train_gaussian_mixture()

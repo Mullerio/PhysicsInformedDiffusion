@@ -35,6 +35,7 @@ class PIDMTrainer:
             self.device = device or torch.device("cpu")
     
         self.model = model.to(self.device)
+        self.pred_type = args.get('model', {}).get('prediction_type', 'eps')
         
         # Initialize diffusion schedule
         num_timesteps = args.get('diffusion', {}).get('num_timesteps', 1000)
@@ -72,7 +73,7 @@ class PIDMTrainer:
             
             pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
             for batch_idx, x in enumerate(pbar):
-                loss = train_step(self.model, self.diffusion_schedule, self.optimizer, x, self.device)
+                loss = train_step(self.model, self.diffusion_schedule, self.optimizer, x, self.device, self.pred_type)
                 train_loss += loss
                 
                 avg_loss = train_loss / (batch_idx + 1)
