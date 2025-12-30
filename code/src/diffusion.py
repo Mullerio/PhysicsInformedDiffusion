@@ -30,6 +30,7 @@ class DiffusionSampler:
     def sample_ddpm(
         self,
         shape: tuple,
+        num_steps: int = 1000,
         progress_bar: bool = True,
     ) -> torch.Tensor:
         """
@@ -181,6 +182,6 @@ class DiffusionSampler:
             Generated samples
         """
         if method.lower() == "ddpm":
-            return self.sample_ddpm(shape, progress_bar)
+            return self.sample_ddpm(shape, num_steps,progress_bar)
         else:
             return self.sample_ddim(shape, num_steps, progress_bar=progress_bar)
