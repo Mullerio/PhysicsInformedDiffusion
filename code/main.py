@@ -3,11 +3,12 @@
 import torch
 from torch.utils.data import DataLoader
 from src.trainer import PIDMTrainer, load_config
-from src.networks import NDimensionalMLP
-from src.data_utils import BaseDataset
+from src.networks import NDimensionalMLP, SimpleUNet
+from src.data_utils import BaseDataset, MNISTDataset
 
 
-def main():
+def train_gaussian_mixture():
+    """Train diffusion model on 2D Gaussian mixture data."""
     # Load configuration
     config = load_config('configs/default_pidm_config.yaml')
     
@@ -45,6 +46,119 @@ def main():
         print(f"Final val loss: {history['val'][-1]:.6f}")
 
 
+def train_mnist(
+    batch_size: int = 128,
+    num_epochs: int = 10,
+    learning_rate: float = 1e-3,
+    data_path: str = "data",
+    val_split: float = 0.1,
+    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+):
+    """Train U-Net diffusion model on MNIST dataset.
+    
+    Args:
+        batch_size: Batch size for training
+        num_epochs: Number of training epochs
+        learning_rate: Learning rate for optimizer
+        data_path: Path to store/load MNIST data
+        val_split: Fraction of training data to use for validation
+        device: Device to train on ('cuda' or 'cpu')
+    """
+    print(f"Training MNIST diffusion model (U-Net) on {device}")
+    
+    # Load configuration
+    config = load_config('configs/default_pidm_config.yaml')
+    
+    # Override with MNIST-specific settings
+    config['training']['batch_size'] = batch_size
+    config['training']['epochs'] = num_epochs
+    config['training']['learning_rate'] = learning_rate
+    config['device']['use_cuda'] = device == 'cuda'
+    
+    # Initialize U-Net model for MNIST (1 channel input/output, 28x28 images)
+    model = SimpleUNet(in_channels=1, out_channels=1, time_embed_dim=128)
+    
+    # Initialize trainer
+    trainer = PIDMTrainer(model=model, args=config)
+    
+    # Create MNIST datasets and dataloaders
+    print("Loading MNIST dataset...")
+    train_dataset = MNISTDataset(split='train', data_path=data_path, val_split=val_split)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=batch_size, 
+        shuffle=True,
+        num_workers=2,
+        collate_fn=_mnist_collate_fn
+    )
+    
+    val_dataset = MNISTDataset(split='val', data_path=data_path, val_split=val_split)
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False,
+        num_workers=2,
+        collate_fn=_mnist_collate_fn
+    )
+    
+    print(f"Training set size: {len(train_dataset)}")
+    print(f"Validation set size: {len(val_dataset)}")
+    
+    print("Starting training...")
+    history = trainer.train(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        num_epochs=num_epochs
+    )
+    
+    print("\nTraining complete!")
+    print(f"Final train loss: {history['train'][-1]:.6f}")
+    if history['val']:
+        print(f"Final val loss: {history['val'][-1]:.6f}")
+    
+    return trainer, history
+
+
+def _mnist_collate_fn(batch):
+    """Collate function to reshape flattened MNIST data to 4D tensors for U-Net."""
+    # batch is a list of 1D tensors (784,)
+    stacked = torch.stack(batch)  # (batch_size, 784)
+    # Reshape to (batch_size, 1, 28, 28)
+    reshaped = stacked.view(-1, 1, 28, 28)
+    return reshaped
+
+
+def main():
+    """Main entry point - trains on Gaussian mixture by default."""
+    train_gaussian_mixture()
+
+
 if __name__ == "__main__":
-    main()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Train diffusion models")
+    parser.add_argument('--dataset', type=str, default='gaussian', 
+                       choices=['gaussian', 'mnist'],
+                       help='Dataset to train on')
+    parser.add_argument('--batch-size', type=int, default=128, 
+                       help='Batch size for training')
+    parser.add_argument('--num-epochs', type=int, default=10, 
+                       help='Number of training epochs')
+    parser.add_argument('--learning-rate', type=float, default=1e-3, 
+                       help='Learning rate for optimizer')
+    parser.add_argument('--data-path', type=str, default='data', 
+                       help='Path to store/load datasets')
+    
+    args = parser.parse_args()
+    
+    if args.dataset == 'mnist':
+        train_mnist(
+            batch_size=args.batch_size,
+            num_epochs=args.num_epochs,
+            learning_rate=args.learning_rate,
+            data_path=args.data_path
+        )
+    else:
+        train_gaussian_mixture()
+
 

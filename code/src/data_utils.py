@@ -1,7 +1,9 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from typing import Tuple
+from torchvision import datasets, transforms
+from typing import Tuple, Optional
 import numpy as np
+import os
 
 
 class BaseDataset(Dataset):
@@ -56,4 +58,70 @@ class BaseDataset(Dataset):
     
     def __getitem__(self, idx: int) -> torch.Tensor:
         return self.data[idx]
+
+
+class MNISTDataset(Dataset):
+    """MNIST dataset for diffusion models.
+    
+    Loads MNIST images and flattens them to 1D vectors (784-dimensional).
+    Normalizes to [0, 1] range.
+    """
+    
+    def __init__(self, split: str = "train", data_path: str = "data", val_split: float = 0.1):
+        """
+        Args:
+            split: Dataset split ('train', 'val', 'test')
+            data_path: Path to store/load MNIST data
+            val_split: Fraction of training data to use for validation
+        """
+        self.split = split
+        self.data_path = data_path
+        os.makedirs(data_path, exist_ok=True)
+        
+        # Define transforms
+        transform = transforms.Compose([
+            transforms.ToTensor(),  # Converts to [0, 1] range
+        ])
+        
+        # Load MNIST dataset
+        if split == 'test':
+            self.mnist = datasets.MNIST(root=data_path, train=False, transform=transform, download=True)
+        else:
+            # Load full training set
+            full_mnist = datasets.MNIST(root=data_path, train=True, transform=transform, download=True)
+            
+            # Split into train and val
+            num_samples = len(full_mnist)
+            val_size = int(num_samples * val_split)
+            train_size = num_samples - val_size
+            
+            train_indices = list(range(train_size))
+            val_indices = list(range(train_size, num_samples))
+            
+            if split == 'train':
+                self.indices = train_indices
+                self.mnist = full_mnist
+            elif split == 'val':
+                self.indices = val_indices
+                self.mnist = full_mnist
+            else:
+                raise ValueError(f"Unknown split: {split}")
+    
+    def __len__(self) -> int:
+        if self.split == 'test':
+            return len(self.mnist)
+        else:
+            return len(self.indices)
+    
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        if self.split == 'test':
+            image, _ = self.mnist[idx]
+        else:
+            actual_idx = self.indices[idx]
+            image, _ = self.mnist[actual_idx]
+        
+        # Flatten image from (1, 28, 28) to (784,)
+        flattened = image.view(-1)
+        
+        return flattened
 

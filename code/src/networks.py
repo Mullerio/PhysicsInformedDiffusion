@@ -42,7 +42,7 @@ class TimeEmbedding(nn.Module):
 
 
 class DiffusionSchedule:
-    """Linear diffusion schedule for forward/reverse processes."""
+    """Diffusion schedules for forward/reverse processes."""
     
     def __init__(self, num_timesteps: int = 1000, schedule_type: str = "linear"):
         """
@@ -100,7 +100,7 @@ class DiffusionSchedule:
 
 
 class ResidualBlock(nn.Module):
-    """Basic residual block with time embedding conditioning."""
+    """Basic residual block with time embedding"""
     
     def __init__(self, channels: int, time_embed_dim: int, dropout: float = 0.1):
         """
@@ -217,8 +217,8 @@ class NDimensionalMLP(nn.Module):
     def __init__(self, in_features: int, out_features: int, time_embed_dim: int = 128, hidden_dim: int = 256):
         """
         Args:
-            in_features: Input feature dimension (e.g., 2, 3, or any n for n-dim sampling)
-            out_features: Output feature dimension (typically same as in_features)
+            in_features: Input dimension 
+            out_features: Output dimension (typically same as in_features)
             time_embed_dim: Time embedding dimension
             hidden_dim: Hidden layer dimension
         """
@@ -242,7 +242,7 @@ class NDimensionalMLP(nn.Module):
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: Input tensor (batch, in_features) - any n-dimensional point data
+            x: Input tensor (batch, in_features)
             t: Timestep indices (batch,)
             
         Returns:
