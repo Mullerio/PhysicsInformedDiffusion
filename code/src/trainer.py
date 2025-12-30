@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from tqdm import tqdm
 import yaml
 import wandb
+from pathlib import Path
 from .utils import create_optimizer, create_scheduler
 from .networks import DiffusionSchedule
 from .loss import train_step, val_step
@@ -19,12 +20,14 @@ class PIDMTrainer:
         model: nn.Module,
         args: Dict,
         device: Optional[torch.device] = None,
+        output_dir: Optional[str] = None,
     ):
         """
         Args:
             model: Diffusion model
             args: Configuration dict    
             device: torch device (selected from config if None)
+            output_dir: Directory to save checkpoints and results
         """
         if args['device']['use_cuda'] and torch.cuda.is_available():
             self.device = device or torch.device(f"cuda:{args['device'].get('device_id', 0)}")
@@ -39,6 +42,10 @@ class PIDMTrainer:
         self.diffusion_schedule = DiffusionSchedule(num_timesteps, schedule_type).to(self.device)
         
         self.args = args
+        
+        # Setup output directory
+        self.output_dir = Path(output_dir) if output_dir else Path('.')
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.optimizer = create_optimizer(self.model, args)
         self.scheduler = create_scheduler(self.optimizer, args)
@@ -124,6 +131,7 @@ class PIDMTrainer:
     
     def save_checkpoint(self, path: str = 'checkpoint.pt') -> None:
         """Save model checkpoint with diffusion schedule."""
+        checkpoint_path = self.output_dir / path
         torch.save({
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
@@ -131,7 +139,8 @@ class PIDMTrainer:
                 'num_timesteps': self.diffusion_schedule.num_timesteps,
                 'schedule_type': self.diffusion_schedule.schedule_type,
             }
-        }, path)
+        }, checkpoint_path)
+        print(f"Checkpoint saved to {checkpoint_path}")
     
     def load_checkpoint(self, path: str) -> None:
         """Load model checkpoint."""

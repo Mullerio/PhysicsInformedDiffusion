@@ -2,6 +2,7 @@
 
 import torch
 from torch.utils.data import DataLoader
+from pathlib import Path
 from src.trainer import PIDMTrainer, load_config
 from src.networks import NDimensionalMLP, SimpleUNet
 from src.data_utils import BaseDataset, MNISTDataset
@@ -9,14 +10,18 @@ from src.data_utils import BaseDataset, MNISTDataset
 
 def train_gaussian_mixture():
     """Train diffusion model on 2D Gaussian mixture data."""
+    # Create output directory
+    output_dir = Path('gaussian_runs')
+    output_dir.mkdir(exist_ok=True)
+    
     # Load configuration
     config = load_config('configs/default_pidm_config.yaml')
     
     # Initialize model for n-dimensional sampling (2D Gaussian mixture example)
     model = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
     
-    # Initialize trainer (no loss function needed for diffusion)
-    trainer = PIDMTrainer(model=model, args=config)
+    # Initialize trainer with output directory
+    trainer = PIDMTrainer(model=model, args=config, output_dir=str(output_dir))
     
     # Create datasets and dataloaders
     train_dataset = BaseDataset(split='train')
@@ -44,6 +49,7 @@ def train_gaussian_mixture():
     print(f"Final train loss: {history['train'][-1]:.6f}")
     if history['val']:
         print(f"Final val loss: {history['val'][-1]:.6f}")
+    print(f"Results saved to {output_dir}/")
 
 
 def train_mnist(
@@ -66,6 +72,10 @@ def train_mnist(
     """
     print(f"Training MNIST diffusion model (U-Net) on {device}")
     
+    # Create output directory
+    output_dir = Path('mnist_runs')
+    output_dir.mkdir(exist_ok=True)
+    
     # Load configuration
     config = load_config('configs/default_pidm_config.yaml')
     
@@ -78,8 +88,8 @@ def train_mnist(
     # Initialize U-Net model for MNIST (1 channel input/output, 28x28 images)
     model = SimpleUNet(in_channels=1, out_channels=1, time_embed_dim=128)
     
-    # Initialize trainer
-    trainer = PIDMTrainer(model=model, args=config)
+    # Initialize trainer with output directory
+    trainer = PIDMTrainer(model=model, args=config, output_dir=str(output_dir))
     
     # Create MNIST datasets and dataloaders
     print("Loading MNIST dataset...")
@@ -115,6 +125,7 @@ def train_mnist(
     print(f"Final train loss: {history['train'][-1]:.6f}")
     if history['val']:
         print(f"Final val loss: {history['val'][-1]:.6f}")
+    print(f"Results saved to {output_dir}/")
     
     return trainer, history
 

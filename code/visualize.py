@@ -1,5 +1,3 @@
-"""Visualization script for comparing ground truth vs generated samples."""
-
 import torch
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -22,16 +20,12 @@ def visualize_samples(checkpoint_path: str, num_samples: int = 4, num_steps: int
         num_steps: Number of diffusion steps for DDIM
         method: 'ddpm' or 'ddim'
     """
-    # Load configuration
     config = load_config('configs/default_pidm_config.yaml')
     
-    # Initialize model for n-dimensional sampling
     model = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
     
-    # Initialize trainer
     trainer = PIDMTrainer(model=model, args=config)
     
-    # Load checkpoint
     print(f"Loading checkpoint from {checkpoint_path}...")
     trainer.load_checkpoint(checkpoint_path)
     
@@ -199,7 +193,11 @@ def visualize_mnist_generation(
     
     # Save figure
     if save_path is None:
-        save_path = Path(checkpoint_path).parent / f"mnist_generated_{method}_{num_steps}.png"
+        checkpoint_dir = Path(checkpoint_path).parent
+        save_path = checkpoint_dir / f"mnist_generated_{method}_{num_steps}.png"
+    
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     print(f"Generated samples saved to {save_path}")
     
@@ -289,7 +287,11 @@ def visualize_mnist_comparison(
     
     # Save figure
     if save_path is None:
-        save_path = Path(checkpoint_path).parent / f"mnist_comparison_{method}_{num_steps}.png"
+        checkpoint_dir = Path(checkpoint_path).parent
+        save_path = checkpoint_dir / f"mnist_comparison_{method}_{num_steps}.png"
+    
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     print(f"Comparison saved to {save_path}")
     
