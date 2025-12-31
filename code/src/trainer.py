@@ -93,7 +93,7 @@ class PIDMTrainer:
                 val_loss = 0.0
                 pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
                 for x in pbar:
-                    loss = val_step(self.model, self.diffusion_schedule, x, self.device)
+                    loss = val_step(self.model, self.diffusion_schedule, x, self.device, self.pred_type)
                     val_loss += loss
                     pbar.set_postfix({'loss': loss})
                 
