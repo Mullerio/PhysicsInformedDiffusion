@@ -169,12 +169,12 @@ def physics_loss_step(
         model: Diffusion model
         diffusion_schedule: Diffusion schedule
         optimizer: Optimizer
-        x: Clean data samples
+        x: samples
         device: Device to run on
         residual_fn: Callable that computes residual R(x0_pred)
         prediction_type: Type of prediction (should be 'x0' for physics-informed)
         weighting_fn: Optional weighting function for x0 prediction
-        lambda_t: Weight for data term
+        c: Weight for physics term
     Returns:
         Loss value
     """
@@ -209,9 +209,7 @@ def physics_loss_step(
         weights = weights.view(*shape)
         # Data term
         data_loss = (weights * (x0_pred - x) ** 2).mean()
-        # Physics residual term
-        # Compute per-sample reverse process variance (Sigma_t) for each t
-        # Sigma_t = (1 - alpha_bar_{t-1}) / (1 - alpha_bar_t) * beta_t
+        # Physics residual term from paper  https://arxiv.org/abs/2403.14404
         alpha_bar_t = diffusion_schedule.alphas_cumprod[t]  # (batch,)
         alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]  # (batch,)
         beta_t = diffusion_schedule.betas[t]  # (batch,)
