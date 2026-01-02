@@ -102,8 +102,8 @@ def visualize_sphere2d(checkpoint_path: str, num_samples: int = 10000, num_steps
     axes[0].set_xlabel("x")
     axes[0].set_ylabel("y")
     axes[0].set_aspect('equal')
-    axes[0].set_xlim(-1.5, 1.5)
-    axes[0].set_ylim(-1.5, 1.5)
+    axes[0].set_xlim(-1, 1)
+    axes[0].set_ylim(-1, 1)
     axes[0].grid(True, alpha=0.3)
     
     # Plot standard model samples
@@ -114,8 +114,8 @@ def visualize_sphere2d(checkpoint_path: str, num_samples: int = 10000, num_steps
     axes[1].set_xlabel("x")
     axes[1].set_ylabel("y")
     axes[1].set_aspect('equal')
-    axes[1].set_xlim(-1.5, 1.5)
-    axes[1].set_ylim(-1.5, 1.5)
+    axes[1].set_xlim(-1, 1)
+    axes[1].set_ylim(-1, 1)
     axes[1].grid(True, alpha=0.3)
     
     # Plot physics model samples
@@ -127,8 +127,8 @@ def visualize_sphere2d(checkpoint_path: str, num_samples: int = 10000, num_steps
         axes[2].set_xlabel("x")
         axes[2].set_ylabel("y")
         axes[2].set_aspect('equal')
-        axes[2].set_xlim(-1.5, 1.5)
-        axes[2].set_ylim(-1.5, 1.5)
+        axes[2].set_xlim(-1, 1)
+        axes[2].set_ylim(-1, 1)
         axes[2].grid(True, alpha=0.3)
     
     plt.tight_layout()

@@ -213,12 +213,13 @@ def physics_loss_step(
         alpha_bar_t = diffusion_schedule.alphas_cumprod[t]  # (batch,)
         alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]  # (batch,)
         beta_t = diffusion_schedule.betas[t]  # (batch,)
-        sigma2_t = ((1 - alpha_bar_tm1) / (1 - alpha_bar_t)) * beta_t  # (batch,)
-        sigma2_t = sigma2_t.view(*shape) 
+        #sigma2_t = ((1 - alpha_bar_tm1) / (1 - alpha_bar_t)) * beta_t  # (batch,)
+        #sigma2_t = sigma2_t.view(*shape) 
         residual = residual_fn(x0_pred)  # shape: (batch, ...)
         # Physics loss: mean over batch
         #NEED TO CLAMP FOR STABILITY
-        sigma2_t = sigma2_t.clamp(min=1e-8)
+        sigma2_t = diffusion_schedule.get_posterior_variance(t)
+        sigma2_t = sigma2_t.view(*shape).clamp(min=1e-8)
 
         physics_loss = (0.5 / sigma2_t * (residual ** 2)).mean()
         loss = data_loss + c * physics_loss

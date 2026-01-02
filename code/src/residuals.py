@@ -14,7 +14,7 @@ def unit_sphere_residual(x: torch.Tensor) -> torch.Tensor:
 	Returns:
 		Tensor of shape (batch_size,) with residuals for each point
 	"""
-	residuals = torch.sum(x ** 2, dim=1) - 1
+	residuals = torch.abs(torch.sum(x ** 2, dim=1) - 1)
 	return residuals
 
 

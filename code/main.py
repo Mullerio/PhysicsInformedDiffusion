@@ -19,26 +19,25 @@ def train_unit_sphere_2d():
     model = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
     trainer = PIDMTrainer(model=model, args=config, output_dir=str(output_dir))
 
-    train_dataset = UnitSphereDataset(num_samples=1000000, dim=2)
+    train_dataset = UnitSphereDataset(num_samples=10000, dim=2)
     train_loader = DataLoader(
         train_dataset,
         batch_size=config['training']['batch_size'],
         shuffle=True
     )
 
-    val_dataset = UnitSphereDataset(num_samples=100000, dim=2)
+    val_dataset = UnitSphereDataset(num_samples=10000, dim=2)
     val_loader = DataLoader(
         val_dataset,
         batch_size=config['training']['batch_size'],
         shuffle=False
     )
-    
     history = trainer.train_physics(
         train_loader=train_loader,
         residual_fn=unit_sphere_residual,
         val_loader=val_loader,
         num_epochs=config['training']['epochs'],
-        c=1.0
+        c=config.get('physics', {}).get('c', 0.05)
     )
     model2 = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
 
