@@ -60,6 +60,30 @@ class BaseDataset(Dataset):
         return self.data[idx]
 
 
+
+class UnitSphereDataset(Dataset):
+    """
+    Dataset of points sampled uniformly from the n-dimensional unit sphere.
+    Each sample is a D-dimensional point x such that ||x||^2 = 1.
+    """
+    def __init__(self, num_samples: int = 10000, dim: int = 2):
+        self.num_samples = num_samples
+        self.dim = dim
+        self.data = self._sample_unit_sphere(num_samples, dim)
+
+    def _sample_unit_sphere(self, num_samples: int, dim: int) -> torch.Tensor:
+        # Sample from standard normal, then normalize each vector to unit length
+        x = torch.randn(num_samples, dim) + 1e-10  # avoid zero 
+        x_norm = torch.norm(x, dim=1, keepdim=True)
+        points = x / x_norm
+        return points
+
+    def __len__(self) -> int:
+        return self.num_samples
+
+    def __getitem__(self, idx: int) -> torch.Tensor:
+        return self.data[idx]
+
 class MNISTDataset(Dataset):
     """MNIST dataset for diffusion models.
     

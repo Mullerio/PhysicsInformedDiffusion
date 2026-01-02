@@ -6,7 +6,7 @@ optimizer:
   name: adamw
 
 training:
-  epochs: 10
+  epochs: 20
   learning_rate: 0.0001
   weight_decay: 0.0001
   batch_size: 1024
@@ -28,4 +28,8 @@ diffusion:
   
 model: 
   type: unet
-  prediction_type: eps
+  prediction_type: x0
+
+
+physics:
+  c: 1.0

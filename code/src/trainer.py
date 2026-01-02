@@ -11,6 +11,7 @@ from pathlib import Path
 from .utils import create_optimizer, create_scheduler
 from .networks import DiffusionSchedule
 from .loss import train_step, val_step
+from src.loss import physics_loss_step, physics_val_step
 
 
 class PIDMTrainer:
@@ -55,37 +56,36 @@ class PIDMTrainer:
             wandb.init(project=self.args['wandb']['project'], config=self.args)
 
         
-    def train(
+    def train_standard(
         self,
         train_loader: DataLoader,
         val_loader: Optional[DataLoader] = None,
         num_epochs: Optional[int] = None,
     ) -> Dict[str, list]:
-        """Train the diffusion model."""
+        """Train diffusion model."""
         num_epochs = num_epochs or self.args['training']['epochs']
         log_freq = self.args['logging'].get('log_freq', 100)
         save_freq = self.args['logging'].get('save_freq', 10)
         history = {'train': [], 'val': []}
-        
+
         for epoch in range(num_epochs):
             self.model.train()
             train_loss = 0.0
-            
+
             pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
             for batch_idx, x in enumerate(pbar):
                 loss = train_step(self.model, self.diffusion_schedule, self.optimizer, x, self.device, self.pred_type)
                 train_loss += loss
-                
+
                 avg_loss = train_loss / (batch_idx + 1)
                 pbar.set_postfix({'loss': avg_loss})
-                
+
                 if batch_idx % log_freq == 0:
                     continue  # TODO: Add needed logging, eval stuff wanted during training here.
-                    
-                    
+
             train_loss /= len(train_loader)
             history['train'].append(train_loss)
-            
+
             # Validation
             val_loss = None
             if val_loader is not None:
@@ -96,7 +96,79 @@ class PIDMTrainer:
                     loss = val_step(self.model, self.diffusion_schedule, x, self.device, self.pred_type)
                     val_loss += loss
                     pbar.set_postfix({'loss': loss})
-                
+                val_loss /= len(val_loader)
+                history['val'].append(val_loss)
+
+            # Scheduler step
+            if self.scheduler:
+                self.scheduler.step()
+
+            # Periodic checkpoint saving
+            if (epoch + 1) % save_freq == 0:
+                self.save_checkpoint(f'checkpoint_epoch_{epoch+1}.pt')
+
+            # Logging
+            log_dict = {'epoch': epoch + 1, 'train_loss': train_loss}
+            if val_loss is not None:
+                log_dict['val_loss'] = val_loss
+            if self.scheduler:
+                log_dict['lr'] = self.optimizer.param_groups[0]['lr']
+
+            print(f"Epoch {epoch+1}/{num_epochs} - train_loss: {train_loss:.6f}", end="")
+            if val_loss is not None:
+                print(f", val_loss: {val_loss:.6f}", end="")
+            print()
+
+            if self.args['wandb']['enabled']:
+                wandb.log(log_dict)
+        if self.args['wandb']['enabled']:
+            wandb.finish()
+        self.save_checkpoint('final_checkpoint.pt')
+        return history
+    
+    
+    def train_physics(
+        self,
+        train_loader: DataLoader,
+        residual_fn,
+        val_loader: Optional[DataLoader] = None,
+        num_epochs: Optional[int] = None,
+        c: float = 1.0,
+    ) -> Dict[str, list]:
+        """Train diffusion model with physics-informed loss."""
+        num_epochs = num_epochs or self.args['training']['epochs']
+        log_freq = self.args['logging'].get('log_freq', 100)
+        save_freq = self.args['logging'].get('save_freq', 10)
+        history = {'train': [], 'val': []}
+
+        for epoch in range(num_epochs):
+            self.model.train()
+            train_loss = 0.0
+
+            pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
+            for batch_idx, x in enumerate(pbar):
+                loss = physics_loss_step(self.model, self.diffusion_schedule, self.optimizer, x, self.device, residual_fn, self.pred_type, c=c)
+                train_loss += loss
+
+                avg_loss = train_loss / (batch_idx + 1)
+                pbar.set_postfix({'loss': avg_loss})
+
+                if batch_idx % log_freq == 0:
+                    continue  # TODO: Add needed logging, eval stuff wanted during training here.
+
+            train_loss /= len(train_loader)
+            history['train'].append(train_loss)
+            
+            # Validation
+            val_loss = None
+            if val_loader is not None:
+                self.model.eval()
+                val_loss = 0.0
+                pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
+                for x in pbar:
+                    loss = physics_val_step(self.model, self.diffusion_schedule, x, self.device, residual_fn, self.pred_type, c=c)
+                    val_loss += loss
+                    pbar.set_postfix({'loss': loss})
                 val_loss /= len(val_loader)
                 history['val'].append(val_loss)
             
@@ -106,7 +178,7 @@ class PIDMTrainer:
             
             # Periodic checkpoint saving
             if (epoch + 1) % save_freq == 0:
-                self.save_checkpoint(f'checkpoint_epoch_{epoch+1}.pt')
+                self.save_checkpoint(f'checkpoint_epoch_{epoch+1}_physics.pt')
             
             # Logging
             log_dict = {'epoch': epoch + 1, 'train_loss': train_loss}
@@ -127,7 +199,7 @@ class PIDMTrainer:
             wandb.finish()
         
         
-        self.save_checkpoint('final_checkpoint.pt')
+        self.save_checkpoint('final_checkpoint_physics.pt')
         return history
     
     def save_checkpoint(self, path: str = 'checkpoint.pt') -> None:

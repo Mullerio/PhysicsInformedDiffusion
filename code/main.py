@@ -5,7 +5,57 @@ from torch.utils.data import DataLoader
 from pathlib import Path
 from src.trainer import PIDMTrainer, load_config
 from src.networks import NDimensionalMLP, SimpleUNet
-from src.data_utils import BaseDataset, MNISTDataset
+from src.data_utils import BaseDataset, MNISTDataset, UnitSphereDataset
+from src.residuals import unit_sphere_residual
+
+
+def train_unit_sphere_2d():
+    """Train diffusion model on 2D unit sphere data using MLP."""
+    output_dir = Path('sphere2d_runs')
+    output_dir.mkdir(exist_ok=True)
+
+    config = load_config('configs/default_pidm_config.yaml')
+
+    model = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
+    trainer = PIDMTrainer(model=model, args=config, output_dir=str(output_dir))
+
+    train_dataset = UnitSphereDataset(num_samples=1000000, dim=2)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config['training']['batch_size'],
+        shuffle=True
+    )
+
+    val_dataset = UnitSphereDataset(num_samples=100000, dim=2)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config['training']['batch_size'],
+        shuffle=False
+    )
+    
+    history = trainer.train_physics(
+        train_loader=train_loader,
+        residual_fn=unit_sphere_residual,
+        val_loader=val_loader,
+        num_epochs=config['training']['epochs'],
+        c=1.0
+    )
+    model2 = NDimensionalMLP(in_features=2, out_features=2, time_embed_dim=128)
+
+    trainer2 = PIDMTrainer(model=model2, args=config, output_dir=str(output_dir))
+
+    history = trainer2.train_standard(
+        train_loader=train_loader,
+        val_loader=val_loader,
+        num_epochs=config['training']['epochs']
+    )
+
+
+    print("Training complete!")
+    print(f"Final train loss: {history['train'][-1]:.6f}")
+    if history['val']:
+        print(f"Final val loss: {history['val'][-1]:.6f}")
+    print(f"Results saved to {output_dir}/")
 
 
 def train_gaussian_mixture():
@@ -151,7 +201,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Train diffusion models")
     parser.add_argument('--dataset', type=str, default='gaussian', 
-                       choices=['gaussian', 'mnist'],
+                       choices=['gaussian', 'mnist', 'sphere2d'],
                        help='Dataset to train on')
     parser.add_argument('--batch-size', type=int, default=128, 
                        help='Batch size for training')
@@ -174,6 +224,8 @@ if __name__ == "__main__":
             data_path=args.data_path,
             pred_type=args.pred_type    
         )
+    elif args.dataset == 'sphere2d':
+        train_unit_sphere_2d()
     else:
         train_gaussian_mixture()
 

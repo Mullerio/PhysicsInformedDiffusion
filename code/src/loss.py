@@ -214,10 +214,13 @@ def physics_loss_step(
         alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]  # (batch,)
         beta_t = diffusion_schedule.betas[t]  # (batch,)
         sigma2_t = ((1 - alpha_bar_tm1) / (1 - alpha_bar_t)) * beta_t  # (batch,)
-        sigma2_t = sigma2_t.view(*shape)
+        sigma2_t = sigma2_t.view(*shape) 
         residual = residual_fn(x0_pred)  # shape: (batch, ...)
         # Physics loss: mean over batch
-        physics_loss = 0.5 / sigma2_t * (residual ** 2).mean()
+        #NEED TO CLAMP FOR STABILITY
+        sigma2_t = sigma2_t.clamp(min=1e-8)
+
+        physics_loss = (0.5 / sigma2_t * (residual ** 2)).mean()
         loss = data_loss + c * physics_loss
     else:
         raise ValueError("Physics-informed loss requires prediction_type='x0' per paper")
@@ -228,3 +231,62 @@ def physics_loss_step(
 
     return loss.item()
 
+
+def physics_val_step(
+    model: nn.Module,
+    diffusion_schedule: DiffusionSchedule,
+    x: torch.Tensor,
+    device: torch.device,
+    residual_fn,  # Callable: computes R(x0_pred)
+    prediction_type: str = "x0",
+    weighting_fn=None,
+    c: float = 1.0, #weight for physics term
+) -> float:
+    """
+    Physics-informed diffusion model validation step.
+    Args:
+        model: Diffusion model
+        diffusion_schedule: Diffusion schedule
+        x: samples
+        device: Device to run on
+        residual_fn: Callable that computes residual R(x0_pred)
+        prediction_type: Type of prediction (should be 'x0' for physics-informed)
+        weighting_fn: Optional weighting function for x0 prediction
+        c: Weight for physics term
+    Returns:
+        Loss value
+    """
+    x = x.to(device)
+    batch_size = x.shape[0]
+    with torch.no_grad():
+        t = torch.randint(0, diffusion_schedule.num_timesteps, (batch_size,), device=device)
+        noise = torch.randn_like(x)
+        sqrt_alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t)
+        sqrt_one_minus_alpha_bar = diffusion_schedule.get_sqrt_one_minus_alphas_cumprod(t)
+        shape = [batch_size] + [1] * (x.dim() - 1)
+        sqrt_alpha_bar = sqrt_alpha_bar.view(*shape)
+        sqrt_one_minus_alpha_bar = sqrt_one_minus_alpha_bar.view(*shape)
+        x_t = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
+        model_out = model(x_t, t)
+        if prediction_type == "x0":
+            x0_pred = model_out
+            if weighting_fn is not None:
+                weights = weighting_fn(diffusion_schedule, t)
+            else:
+                alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t) ** 2
+                weights = alpha_bar / (1 - alpha_bar)
+            weights = weights.view(*shape)
+            data_loss = (weights * (x0_pred - x) ** 2).mean()
+            alpha_bar_t = diffusion_schedule.alphas_cumprod[t]
+            alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]
+            beta_t = diffusion_schedule.betas[t]
+            sigma2_t = ((1 - alpha_bar_tm1) / (1 - alpha_bar_t)) * beta_t
+            sigma2_t = sigma2_t.view(*shape)
+            sigma2_t = sigma2_t.clamp(min=1e-8)
+
+            residual = residual_fn(x0_pred)
+            physics_loss = (0.5 / sigma2_t * (residual ** 2)).mean()
+            loss = data_loss + c * physics_loss
+        else:
+            raise ValueError("Physics-informed loss requires prediction_type='x0' per paper")
+    return loss.item()
