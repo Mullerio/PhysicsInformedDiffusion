@@ -34,6 +34,8 @@ class DiffusionSampler:
         shape: tuple,
         num_steps: int = 1000,
         progress_bar: bool = True,
+        t: torch.Tensor = None,
+        x_t: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Sample using DDPM (stochastic, uses all timesteps for best quality).
@@ -41,15 +43,27 @@ class DiffusionSampler:
         Args:
             shape: Shape of samples to generate (batch_size, ...)
             progress_bar: Whether to show progress bar
+            t: Optional timestep tensor to start from (if provided, starts denoising from this timestep)
+            x_t: Optional initial sample to start from (if provided, uses this instead of random noise)
             
         Returns:
             Generated samples
         """
         batch_size = shape[0]
-        x_t = torch.randn(shape, device=self.device)
         
-        # Use all timesteps for DDPM
-        timesteps = torch.arange(self.diffusion_schedule.num_timesteps - 1, -1, -1)
+        # Use provided x_t or generate random noise
+        if x_t is None:
+            x_t = torch.randn(shape, device=self.device)
+        else:
+            x_t = x_t.to(self.device)
+        
+        # Use all timesteps for DDPM, or start from t if provided
+        if t is not None:
+            # t is the starting timestep
+            start_t = t.item() if torch.is_tensor(t) else t
+            timesteps = torch.arange(start_t, -1, -1)
+        else:
+            timesteps = torch.arange(self.diffusion_schedule.num_timesteps - 1, -1, -1)
         
         iterator = tqdm(timesteps, disable=not progress_bar)
         
@@ -109,6 +123,8 @@ class DiffusionSampler:
         num_steps: int = 50,
         eta: float = 0.0,
         progress_bar: bool = True,
+        t: torch.Tensor = None,
+        x_t: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Sample using DDIM as in https://arxiv.org/abs/2010.02502.
@@ -118,14 +134,25 @@ class DiffusionSampler:
             num_steps: Number of reverse steps (can be < num_timesteps)
             eta: Stochasticity parameter (0 = deterministic)
             progress_bar: Whether to show progress bar
+            t: Optional timestep tensor to start from (if provided, starts denoising from this timestep)
+            x_t: Optional initial sample to start from (if provided, uses this instead of random noise)
             
         Returns:
             Generated samples
         """
-        x_t = torch.randn(shape, device=self.device)
+        # Use provided x_t or generate random noise
+        if x_t is None:
+            x_t = torch.randn(shape, device=self.device)
+        else:
+            x_t = x_t.to(self.device)
         
         # subsample timesteps for faster DDIM sampling
-        timesteps = torch.linspace(self.diffusion_schedule.num_timesteps - 1, 0, num_steps, dtype=torch.long, device=self.device)
+        if t is not None:
+            # Start from the provided timestep
+            start_t = t.item() if torch.is_tensor(t) else t
+            timesteps = torch.linspace(start_t, 0, num_steps, dtype=torch.long, device=self.device)
+        else:
+            timesteps = torch.linspace(self.diffusion_schedule.num_timesteps - 1, 0, num_steps, dtype=torch.long, device=self.device)
         
         iterator = tqdm(timesteps, disable=not progress_bar)
         
@@ -177,6 +204,8 @@ class DiffusionSampler:
         num_steps: int = 1000,
         progress_bar: bool = True,
         method: str = "ddim",
+        t: torch.Tensor = None,
+        x_t: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Sample from the diffusion model.
@@ -186,11 +215,19 @@ class DiffusionSampler:
             num_steps: Number of reverse steps (used by DDIM; ignored for DDPM which uses all timesteps)
             progress_bar: Whether to show progress bar
             method: 'ddpm' (all steps, stochastic) or 'ddim' (faster, deterministic)
+            t: Optional timestep tensor to start from (if provided, starts denoising from this timestep)
+            x_t: Optional initial sample to start from (if provided, uses this instead of random noise)
             
         Returns:
             Generated samples
         """
-        if method.lower() == "ddpm":
-            return self.sample_ddpm(shape, num_steps,progress_bar)
+        if t is None:
+            if method.lower() == "ddpm":
+                return self.sample_ddpm(shape, num_steps, progress_bar, x_t=x_t)
+            else:
+                return self.sample_ddim(shape, num_steps, progress_bar=progress_bar, x_t=x_t)
         else:
-            return self.sample_ddim(shape, num_steps, progress_bar=progress_bar)
+            if method.lower() == "ddpm":
+                return self.sample_ddpm(shape, num_steps, progress_bar, t, x_t)
+            else:
+                return self.sample_ddim(shape, num_steps, progress_bar=progress_bar, t=t, x_t=x_t)
