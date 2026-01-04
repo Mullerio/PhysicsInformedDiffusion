@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from typing import Optional
 from .networks import DiffusionSchedule
+from .diffusion import DiffusionSampler
 
 class MinSNRWeighting:
     def __init__(self, gamma: float = 5.0):
@@ -162,6 +163,8 @@ def physics_loss_step(
     prediction_type: str = "x0",
     weighting_fn=None,
     c: float = 1.0, #weight for physics term
+    use_ddim: bool = False,  # Use DDIM sampling for x_t
+    ddim_steps: int = 50,  # Number of DDIM steps for sampling
 ) -> float:
     """
     Physics-informed diffusion model training step.
@@ -169,21 +172,23 @@ def physics_loss_step(
         model: Diffusion model
         diffusion_schedule: Diffusion schedule
         optimizer: Optimizer
-        x: samples
+        x: samples (used as reference for data loss in mean estimation, or for shape in sample estimation)
         device: Device to run on
         residual_fn: Callable that computes residual R(x0_pred)
         prediction_type: Type of prediction (should be 'x0' for physics-informed)
         weighting_fn: Optional weighting function for x0 prediction
         c: Weight for physics term
+        use_ddim: If True, use DDIM sample estimation (sample x_0 then forward diffuse); 
+                  if False, use mean estimation (standard forward diffusion from data)
+        ddim_steps: Number of steps for DDIM sampling (only used if use_ddim=True)
     Returns:
         Loss value
     """
     x = x.to(device)
     batch_size = x.shape[0]
 
+    # Sample timesteps
     t = torch.randint(0, diffusion_schedule.num_timesteps, (batch_size,), device=device)
-
-    noise = torch.randn_like(x)
 
     sqrt_alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t)
     sqrt_one_minus_alpha_bar = diffusion_schedule.get_sqrt_one_minus_alphas_cumprod(t)
@@ -192,8 +197,19 @@ def physics_loss_step(
     sqrt_alpha_bar = sqrt_alpha_bar.view(*shape)
     sqrt_one_minus_alpha_bar = sqrt_one_minus_alpha_bar.view(*shape)
 
-    # Forward diffusion
+    # Always do forward diffusion from actual data first
+    noise = torch.randn_like(x)
     x_t = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
+
+    x_0_sample = None
+    if use_ddim:
+        # Sample estimation: use DDIM to denoise from x_t back to x_0
+        sampler = DiffusionSampler(model, diffusion_schedule, device, pred_type=prediction_type)
+        with torch.no_grad():
+            # Denoise from x_t at timestep t to x_0 using DDIM
+            # Pass scalar timestep (t[0] since all elements are the same)
+            x_0_sample = sampler.sample_ddim(x.shape, num_steps=ddim_steps, progress_bar=False, t=t[0], x_t=x_t)
+    # else: do nothing, use mean estimation
 
     optimizer.zero_grad()
 
@@ -207,18 +223,25 @@ def physics_loss_step(
             alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t) ** 2
             weights = alpha_bar / (1 - alpha_bar)
         weights = weights.view(*shape)
-        # Data term
+        # Data term: always compare prediction to actual data
         data_loss = (weights * (x0_pred - x) ** 2).mean()
+        
         # Physics residual term from paper  https://arxiv.org/abs/2403.14404
+        # For sample estimation, evaluate residual on the DDIM-denoised sample
+        if use_ddim and x_0_sample is not None:
+            residual = residual_fn(x_0_sample)
+        else:
+            # Mean estimation: evaluate residual on current prediction
+            residual = residual_fn(x0_pred)
+        
         alpha_bar_t = diffusion_schedule.alphas_cumprod[t]  # (batch,)
         alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]  # (batch,)
         beta_t = diffusion_schedule.betas[t]  # (batch,)
         #sigma2_t = ((1 - alpha_bar_tm1) / (1 - alpha_bar_t)) * beta_t  # (batch,)
         #sigma2_t = sigma2_t.view(*shape) 
-        residual = residual_fn(x0_pred)  # shape: (batch, ...)
         # Physics loss: mean over batch
         #NEED TO CLAMP FOR STABILITY
-        sigma2_t = diffusion_schedule.get_posterior_variance(t)
+        sigma2_t = diffusion_schedule.get_posterior_var(t)
         sigma2_t = sigma2_t.view(*shape).clamp(min=1e-8)
 
         physics_loss = (0.5 / sigma2_t * (residual ** 2)).mean()
@@ -242,32 +265,50 @@ def physics_val_step(
     prediction_type: str = "x0",
     weighting_fn=None,
     c: float = 1.0, #weight for physics term
+    use_ddim: bool = False,  # Use DDIM sampling for x_t
+    ddim_steps: int = 50,  # Number of DDIM steps for sampling
 ) -> float:
     """
     Physics-informed diffusion model validation step.
     Args:
         model: Diffusion model
         diffusion_schedule: Diffusion schedule
-        x: samples
+        x: samples (used as reference for data loss in mean estimation, or for shape in sample estimation)
         device: Device to run on
         residual_fn: Callable that computes residual R(x0_pred)
         prediction_type: Type of prediction (should be 'x0' for physics-informed)
         weighting_fn: Optional weighting function for x0 prediction
         c: Weight for physics term
+        use_ddim: If True, use DDIM sample estimation (sample x_0 then forward diffuse); 
+                  if False, use mean estimation (standard forward diffusion from data)
+        ddim_steps: Number of steps for DDIM sampling (only used if use_ddim=True)
     Returns:
         Loss value
     """
     x = x.to(device)
     batch_size = x.shape[0]
     with torch.no_grad():
+        # Sample timesteps
         t = torch.randint(0, diffusion_schedule.num_timesteps, (batch_size,), device=device)
-        noise = torch.randn_like(x)
         sqrt_alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t)
         sqrt_one_minus_alpha_bar = diffusion_schedule.get_sqrt_one_minus_alphas_cumprod(t)
         shape = [batch_size] + [1] * (x.dim() - 1)
         sqrt_alpha_bar = sqrt_alpha_bar.view(*shape)
         sqrt_one_minus_alpha_bar = sqrt_one_minus_alpha_bar.view(*shape)
+        
+        # Always do forward diffusion from actual data first
+        noise = torch.randn_like(x)
         x_t = sqrt_alpha_bar * x + sqrt_one_minus_alpha_bar * noise
+        
+        x_0_sample = None
+        if use_ddim:
+            # Sample estimation: use DDIM to denoise from x_t back to x_0
+            sampler = DiffusionSampler(model, diffusion_schedule, device, pred_type=prediction_type)
+            # Denoise from x_t at timestep t to x_0 using DDIM
+            # Pass scalar timestep (t[0] since all elements are the same)
+            x_0_sample = sampler.sample_ddim(x.shape, num_steps=ddim_steps, progress_bar=False, t=t[0], x_t=x_t)
+        # else: do nothing, use mean estimation
+        
         model_out = model(x_t, t)
         if prediction_type == "x0":
             x0_pred = model_out
@@ -277,7 +318,16 @@ def physics_val_step(
                 alpha_bar = diffusion_schedule.get_sqrt_alphas_cumprod(t) ** 2
                 weights = alpha_bar / (1 - alpha_bar)
             weights = weights.view(*shape)
+            # Data term: always compare prediction to actual data
             data_loss = (weights * (x0_pred - x) ** 2).mean()
+            
+            # Physics residual: for sample estimation, use DDIM-denoised sample
+            if use_ddim and x_0_sample is not None:
+                residual = residual_fn(x_0_sample)
+            else:
+                # Mean estimation: evaluate residual on current prediction
+                residual = residual_fn(x0_pred)
+            
             alpha_bar_t = diffusion_schedule.alphas_cumprod[t]
             alpha_bar_tm1 = diffusion_schedule.alphas_cumprod_prev[t]
             beta_t = diffusion_schedule.betas[t]
@@ -285,7 +335,6 @@ def physics_val_step(
             sigma2_t = sigma2_t.view(*shape)
             sigma2_t = sigma2_t.clamp(min=1e-8)
 
-            residual = residual_fn(x0_pred)
             physics_loss = (0.5 / sigma2_t * (residual ** 2)).mean()
             loss = data_loss + c * physics_loss
         else:

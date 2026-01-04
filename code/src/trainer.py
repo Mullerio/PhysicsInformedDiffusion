@@ -134,11 +134,18 @@ class PIDMTrainer:
         val_loader: Optional[DataLoader] = None,
         num_epochs: Optional[int] = None,
         c: float = 1.0,
+        use_ddim: Optional[bool] = None,
+        ddim_steps: Optional[int] = None,
     ) -> Dict[str, list]:
         """Train diffusion model with physics-informed loss."""
         num_epochs = num_epochs or self.args['training']['epochs']
         log_freq = self.args['logging'].get('log_freq', 100)
         save_freq = self.args['logging'].get('save_freq', 10)
+        
+        # Get DDIM settings from args if not provided
+        use_ddim = self.args.get('physics', {}).get('use_ddim', False)
+        ddim_steps = self.args.get('physics', {}).get('ddim_steps', 50)
+        
         history = {'train': [], 'val': []}
 
         for epoch in range(num_epochs):
@@ -147,7 +154,18 @@ class PIDMTrainer:
 
             pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Train]")
             for batch_idx, x in enumerate(pbar):
-                loss = physics_loss_step(self.model, self.diffusion_schedule, self.optimizer, x, self.device, residual_fn, self.pred_type, c=c)
+                loss = physics_loss_step(
+                    self.model, 
+                    self.diffusion_schedule, 
+                    self.optimizer, 
+                    x, 
+                    self.device, 
+                    residual_fn, 
+                    self.pred_type, 
+                    c=c,
+                    use_ddim=use_ddim,
+                    ddim_steps=ddim_steps
+                )
                 train_loss += loss
 
                 avg_loss = train_loss / (batch_idx + 1)
@@ -166,7 +184,17 @@ class PIDMTrainer:
                 val_loss = 0.0
                 pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} [Val]")
                 for x in pbar:
-                    loss = physics_val_step(self.model, self.diffusion_schedule, x, self.device, residual_fn, self.pred_type, c=c)
+                    loss = physics_val_step(
+                        self.model, 
+                        self.diffusion_schedule, 
+                        x, 
+                        self.device, 
+                        residual_fn, 
+                        self.pred_type, 
+                        c=c,
+                        use_ddim=use_ddim,
+                        ddim_steps=ddim_steps
+                    )
                     val_loss += loss
                     pbar.set_postfix({'loss': loss})
                 val_loss /= len(val_loader)

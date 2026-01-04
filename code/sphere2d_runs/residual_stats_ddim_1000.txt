@@ -1,0 +1,14 @@
+Sphere Residual Statistics
+============================================================
+
+Ground Truth:
+  Mean Abs Residual: 0.000000
+  Std Residual: 0.000000
+
+Standard Model:
+  Mean Abs Residual: 0.004819
+  Std Residual: 0.005119
+
+Physics Model:
+  Mean Abs Residual: 0.003148
+  Std Residual: 0.002321
