@@ -16,6 +16,8 @@
 \usepackage{mathtools}
 \usepackage{comment}
 
+
+
 \newtheoremstyle{reminder}% Custom style for reminders
   {3pt} % Space above
   {3pt} % Space below
@@ -51,6 +53,7 @@
 \section{Setup: Physics Informed Diffusion Models}
 
 \section{Training Algorithm}
+
 \section{Experiments}
 \section{Discussion}
 
@@ -71,18 +74,30 @@
 
 \begin{frame}{Physics Informed Diffusion Models}
     \begin{definition}
-        Add your definition here.
+        We assume our physics is described by a PDE on $\Omega \subseteq \mathbb{R}^d$ of the form 
+        \[
+            \mathcal{F}\left(u(\xi)\right) = 0 \quad \text{with} \quad \xi \in \Omega. 
+        \]
+        and we have a boundary operator 
+        \[\mathcal{B}\left(u(\xi)\right) = 0 \quad \text{with} \quad \xi \in \partial \Omega.\]
+        where $u : \Omega \rightarrow \mathbb{R}^c$ is the solution of interest. To simplify, we write \[R(u(\xi)) = [\mathcal{F}(u(\xi)), \mathcal{B}(u(\xi))]^\top\].
     \end{definition}
-    
-    \begin{theorem}
-        State your theorem here.
-    \end{theorem}
+    They only consider $$[1,...,n] \times [1,...,n] \subseteq \mathbb{Z}_n \times \mathbb{Z}_n.$$
+    Similar to standard image based diffusion models, data is then considered to be given as $x_0 \in \mathbb{R}^{c \times n \times n}$ and $\mathcal{F}, \mathcal{B}$ are discretized accordingly.
 \end{frame}
 
-\begin{frame}{Example Slide}
-    \begin{center}
-        \includegraphics[width=0.6\textwidth]{images/example.png}
-    \end{center}
+
+
+\begin{frame}{Setting up Physics based Training Objective}
+    \begin{itemize}
+        \item $\mathcal{R} = 0$ in the non discrete gives us an infinite amount of information. 
+        \item Hence, first consider the physics based loss. 
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Introducing the Data Loss}
+    
 \end{frame}
 
 %%%%%%%%%%%%%%%%%% End of Presentation %%%%%%%%%%%%%%%%%
