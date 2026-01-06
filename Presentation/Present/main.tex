@@ -89,14 +89,28 @@
 
 
 \begin{frame}{Setting up Physics based Training Objective}
-    \begin{itemize}
-        \item $\mathcal{R} = 0$ in the non discrete gives us an infinite amount of information. 
-        \item Hence, first consider the physics based loss. 
-    \end{itemize}
+    The residual $\mathcal{R} = 0$ in the non discrete gives us an infinite amount of information. 
+    To utilize this, we introduce a loss based on $\mathcal{R}$ via a \textit{virtual observable}.
+
+    $$q_{\mathcal{R}}(\cdot \mid x_0) \sim \mathcal{N}(\mathcal{R}(x_0), \sigma^2 I_d)$$
+
 
     \begin{definition}
-        
+        Define $$p_\theta(\hat{r}) = \int_{\Omega} q_{\mathcal{R}}(\hat{r} \mid x_0) p_\theta(x_0) dx_0$$
+        then we can optimize 
+        $$ \arg \max_\theta \mathbb{E}_{\hat{r} \sim \delta_0}\left[\log p_\theta(\hat{r})\right]=\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(\hat{r}=0 \mid x_0\right)\right] .$$
     \end{definition}
+    So we can train our model by evaluating $x_0$ on the the virtual observable log likelihood.
+    Note that this loss is equivalent to $$\arg \max_\theta \log p_\theta(0) = \arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0\right)\right]$$
+\end{frame}
+
+\begin{frame}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{images/2026-01-06-00-39-43.png}
+\caption{}
+\label{fig:main-2026-01-06-00-39-43}
+\end{figure}
 \end{frame}
 
 \begin{frame}{Introducing the Data Loss}
