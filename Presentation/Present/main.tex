@@ -3,7 +3,6 @@
 \usepackage{xcolor, soul}
 \sethlcolor{red}
 \usepackage[absolute,overlay]{textpos}
-\usepackage[ruled,vlined]{algorithm2e}
 \usepackage{dsfont}
 \usepackage{array}
 \usepackage{tikz}
@@ -15,8 +14,9 @@
 \usepackage{mathrsfs}
 \usepackage{mathtools}
 \usepackage{comment}
-
-
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{float} 
 
 \newtheoremstyle{reminder}% Custom style for reminders
   {3pt} % Space above
@@ -114,10 +114,59 @@
 \end{frame}
 
 \begin{frame}{Introducing the Data Loss}
-    
+    We explicitly consider that we have a dataset, which we also want to consider in our training objective. 
+    For this, we just additionally introduce the standard model log likelihood as an additional term. 
+    \begin{definition}
+        Our objective is given by
+        $$\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta} \left[\log p_\theta(x_0)\right] +\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0\right)\right]$$
+    \end{definition}
+
+\end{frame}
+\begin{frame}{Sample and Mean Estimation}
+    Classical diffusion models try and approximate $$\hat{x}_0 \approx \mathbb{E}[x_0 \mid x_t]$$
+    where $\hat{x}_0$ is the model. Then, use $\hat{x}_0$ directly for the loss. This is called \text{mean estimation}. However, if we just compute our physics loss via plugging the model output into the residual we have  $$\mathcal{R}(\hat{x}_0) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0 \mid x_t)]$$
+    which would be the correct expected residual. To mitigate this, they increase the variance as $t$ increases.  
+    Another solution, which is more costly during training, is to use DDIM sampling, which will yield us a sample $x_0^*$ of $p_\theta$, which yields us a better estimate for the residual, this they call sample estimation.    
 \end{frame}
 
 \begin{frame}{Full Training Algorithm}
+\begin{algorithm}[H]
+\caption{Physics-informed diffusion model training}
+\label{alg:pidm}
+\begin{algorithmic}[1]
+\State Set $\bar{\Sigma}_t = \Sigma_t / c = \frac{1- \overline{\alpha}_{t-1}}{1- \overline{\alpha}_{t}} \cdot \frac{\beta_t}{c} I$
+\Repeat
+    \State Sample $x_0 \sim q(x_0), t \sim \text{Uniform}\{1, \ldots, T\}, \epsilon \sim \mathcal{N}(0, I)$
+    \State Compute
+    \[
+        x_t = \sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1 - \bar{\alpha}_t}\, \epsilon
+    \]
+    \State Estimate $x_0^*$ via
+        $\hat{x}_0 \approx \mathbb{E}[x_0 \mid x_t]$
+    or DDIM sampling. 
+    \State Take a gradient descent step on
+    \[
+        \nabla_\theta \Bigg[
+        \lambda_t \left\| x_0 - \hat{x}_0(x_t, t) \right\|^2
+        + \frac{1}{2\Sigma_t}
+        \left\| \mathcal{R}\!\left(x_0^*(x_t, t)\right) \right\|^2
+        \Bigg]
+    \]
+\Until{converged or for fixed number of iterations}
+\end{algorithmic}
+\end{algorithm}
+\end{frame}
+
+\begin{frame}{Experimental Setup}
+    They consider only one set of PDEs, namely the Darcy Flow equations given by 
+    \begin{align*}
+        u(x) = - K(x) \nabla p(x) \\
+        -\nabla \cdot u(x) = f(x) \\
+    \end{align*}
+    where $K$ is the permeability field, $p$ the pressure field and $f$ a source term. They describe fluid flow through porus media e.g. materials with small holes like sponges.
+\end{frame}
+
+\begin{frame}{Experimental Results}
     
 \end{frame}
 
