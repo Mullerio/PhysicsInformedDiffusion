@@ -166,19 +166,24 @@
     where $K$ is the permeability field, $p$ the pressure field and $f$ a source term. They describe fluid flow through porus media.
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\linewidth]{images/2026-01-06-22-54-59.png}
-\caption{}
+\includegraphics[width=0.5\linewidth]{images/vecteezy_diagonal-cleaning-sponge-photo_65421531.png}
+\caption{A porus medium (sponge).}
 \label{fig:main-2026-01-06-22-54-59}
 \end{figure}
 \end{frame}
-
-\begin{frame}{Experimental Results}
-    
+  \begin{frame}{Experimental Results}
+    \begin{figure}[h] 
+\centering
+\includegraphics[width=0.8\linewidth]{images/2026-01-07-12-46-34.png}
+\caption{Difference between standard diffusion models and physics informed version.}
+\label{fig:main-2026-01-07-12-46-34}
+\end{figure}
 \end{frame}
 
 \begin{frame}{Discussion}
-    \begin{itemize}
+     \begin{itemize}
         \item They only consider 2d data and PDEs on $\mathbb{R}^2$, how this works on higher dimensions is not tested. 
+        \item The hyperparameter $c$ for the variance is crucial, choosing it too large leads to an overfocus on the residual and thus not sampling from the entire data distribution.
     \end{itemize}
 \end{frame}
 
