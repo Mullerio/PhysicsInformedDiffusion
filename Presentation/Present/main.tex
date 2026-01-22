@@ -65,14 +65,24 @@
 %%%%%%%%%%%%%%%%%% Beginning of slides %%%%%%%%%%%%%%%%%
 
 \begin{frame}{Recap Diffusion Models}
-    \begin{itemize}
-        \item First point
-        \item Second point
-        \item Third point
-    \end{itemize}
+        Diffusion models want to optimize $$\arg \max_\theta \mathbb{E}_{x_0 \sim p_{data}}\left[\log p_\theta(x_0)\right]$$
+        and do so by learning the backward OU or a denoising process, with a loss like $$L(\theta) = \mathbb{E}_{t \sim U([0,T]), x_0 \sim p_{data}}\left[\lambda_t \| x_0 - \hat{x}_0(x_t, t)\|^2\right]$$
+    \begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{images/2026-01-22-23-53-56.png}
+\caption{Forward and backward SDE in diffusion models.}
+\label{fig:main-2026-01-22-23-53-56}
+\end{figure}
 \end{frame}
 
-\begin{frame}{Physics Informed Diffusion Models}
+\begin{frame}
+    \begin{center}
+        \large
+        How can we enforce physical constraints?
+    \end{center}
+\end{frame}
+
+\begin{frame}{Physics Setup}
     \begin{definition}
         We assume our physics is described by a PDE on $\Omega \subseteq \mathbb{R}^d$ of the form 
         \[
@@ -104,6 +114,8 @@
     Note that this loss is equivalent to $$\arg \max_\theta \log p_\theta(0) = \arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0\right)\right]$$
 \end{frame}
 
+\begin{comment}
+    
 \begin{frame}
 \begin{figure}[h]
 \centering
@@ -113,13 +125,26 @@
 \end{figure}
 \end{frame}
 
+\end{comment}
+
+
 \begin{frame}{Introducing the Data Loss}
-    We explicitly consider that we have a dataset, which we also want to consider in our training objective. 
-    For this, we just additionally introduce the standard model log likelihood as an additional term. 
-    \begin{definition}
-        Our objective is given by
-        $$\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta} \left[\log p_\theta(x_0)\right] +\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0\right)\right]$$
-    \end{definition}
+    How can we also accommodate a data loss? \\
+    $\rightarrow$ Simply add the standard diffusion objective!
+\begin{definition}
+Thus the objective is given by
+\[
+\arg\max_{\theta}\Bigg(
+\underbrace{
+\mathbb{E}_{x_0 \sim p_\theta}\!\left[\log p_\theta(x_0)\right]
+}_{\text{data likelihood term}}
+\;+\;
+\underbrace{
+\mathbb{E}_{x_0 \sim p_\theta}\!\left[\log q_{\mathcal{R}}\!\left(0 \mid x_0\right)\right]
+}_{\text{physics likelihood term}}
+\Bigg)
+\]
+\end{definition}
 
 \end{frame}
 \begin{frame}{Sample and Mean Estimation}
