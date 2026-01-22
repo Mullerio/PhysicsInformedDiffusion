@@ -146,13 +146,21 @@ Thus the objective is given by
 \]
 \end{definition}
 
+\begin{center}
+How do we go from objective to training algorithm? 
+    
+\end{center}
+
 \end{frame}
+
+
 \begin{frame}{Sample and Mean Estimation}
     Classical diffusion models try and approximate $$\hat{x}_0 \approx \mathbb{E}[x_0 \mid x_t]$$
     where $\hat{x}_0$ is the model. Then, use $\hat{x}_0$ directly for the loss. This is called \text{mean estimation}. However, if we just compute our physics loss via plugging the model output into the residual we have  $$\mathcal{R}(\hat{x}_0) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0 \mid x_t)]$$
     which would be the correct expected residual. To mitigate this, they increase the variance as $t$ increases.  
     Another solution, which is more costly during training, is to use DDIM sampling, which will yield us a sample $x_0^*$ of $p_\theta$, which yields us a better estimate for the residual, this they call sample estimation.    
 \end{frame}
+
 
 \begin{frame}{Full Training Algorithm}
 
@@ -181,7 +189,7 @@ Thus the objective is given by
 \end{algorithmic}
 \end{algorithm}
 Where $c > 0$ is some hyperparameter which controls the weight of the physics loss.
-
+SIGMAT INCREASES WITH TIME 
 \end{frame}
 
 \begin{frame}{Experimental Setup}
