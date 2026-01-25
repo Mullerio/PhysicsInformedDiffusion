@@ -229,6 +229,12 @@ $c > 0$ is a hyperparameter which controls the weight of the physics loss. \\
         \item They only consider 2d data and PDEs on $\mathbb{R}^2$, how this works on higher dimensions is not tested. 
         \item The hyperparameter $c$ for the variance is crucial, choosing it too large leads to an overfocus on the residual and thus not sampling from the entire data distribution.
     \end{itemize}
+    \begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{images/2026-01-25-01-34-15.png}
+\caption{Self implemented toy example, where too large $c$ leads to bad results.}
+\label{fig:main-2026-01-25-01-34-15}
+\end{figure}
 \end{frame}
 
 
