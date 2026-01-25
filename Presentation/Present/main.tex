@@ -153,12 +153,15 @@ How should we choose the $\sigma$ in $q_{\mathcal{R}}$?
 
 \end{frame}
 
-\begin{frame}{Sample and Mean Estimation}
+\begin{frame}{Problem: Mean Estimation}
     Classical diffusion models try and approximate $$\hat{x}_0 \approx \mathbb{E}[x_0 \mid x_t]$$
     where $\hat{x}_0$ is the model. Then, use $\hat{x}_0$ directly for the loss. 
     However, it holds $$\mathcal{R}(\hat{x}_0) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0 \mid x_t)]$$
-    To mitigate this, they increase the variance as $t$ increases.   
-    Another solution, which is more costly during training, is to use DDIM sampling, which will yield us a sample $x_0^*$ of $p_\theta$, which yields us a better estimate for the residual, this they call sample estimation.    
+    To mitigate this, they increase the variance as $t$ increases. They choose 
+        $$q_{\mathcal{R}}(\cdot \mid x_0, t) = \exp \left(- \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 \right) \sim \mathcal{N}(\mathcal{R}(x_0), \Sigma_t I_d)$$
+    where $\Sigma_t$ is the same as the variance of $x_t$.
+    
+    Another solution $\rightarrow$ DDIM sampling.   
 \end{frame}
 
 
@@ -190,7 +193,7 @@ How should we choose the $\sigma$ in $q_{\mathcal{R}}$?
 \end{algorithmic}
 \end{algorithm}
 $c > 0$ is a hyperparameter which controls the weight of the physics loss. \\
-$\rightarrow$ Why the $\frac{1}{\Sigma_t}$ factor?
+\textbf{Note:} The physics loss is just the log likelihood of the virtual observable!
 \end{frame}
 
 
