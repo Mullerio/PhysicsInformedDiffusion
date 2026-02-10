@@ -136,7 +136,7 @@ Thus the objective is given by
 \[
 \arg\max_{\theta}\Bigg(
 \underbrace{
-\mathbb{E}_{x_0 \sim p_\theta}\!\left[\log p_\theta(x_0)\right]
+\mathbb{E}_{x_0 \sim p_{data}}\!\left[\log p_\theta(x_0)\right]
 }_{\text{data likelihood term}}
 \;+\;
 \underbrace{
@@ -146,22 +146,51 @@ Thus the objective is given by
 \]
 \end{definition}
 
-\begin{center}
-How do we go from objective to training algorithm? \\
-How should we choose the $\sigma$ in $q_{\mathcal{R}}$?
-\end{center}
+2 main questions arise from this objective: \\
+
+\begin{enumerate}
+    \item How do we optimize this objective? Sampling from $p_\theta$ is expensive. 
+    \item How should we choose the $\sigma$ in $q_{\mathcal{R}}$?
+
+\end{enumerate}
 
 \end{frame}
 
-\begin{frame}{Problem: Mean Estimation}
-    Classical diffusion models try and approximate $$\hat{x}_0 \approx \mathbb{E}[x_0 \mid x_t]$$
-    where $\hat{x}_0$ is the model. Then, use $\hat{x}_0$ directly for the loss. 
-    However, it holds $$\mathcal{R}(\hat{x}_0) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0 \mid x_t)]$$
+\begin{frame}{Problem 1: Mean Estimation}
+    In classical diffusion training we have estimate as $$\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$$
+    Then, in the classic loss we directly use that in our loss. 
+    However, it holds $$\mathcal{R}(\hat{x}_0(x_t, t)) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$$
+    How can we estimate $\mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$ effectively?  
+
+    \bigbreak
+    $\quad \longrightarrow$ Mitigate this effect by a appropriate choice of variance for $q_\mathcal{R}$. \\
+    $\quad \longrightarrow$ Use DDIM sampling to get $x_0 \sim p_\theta$ and then evaluate $\mathcal{R}$ on those.
+\end{frame}
+
+
+\begin{frame}{Heuristic Solution to Mean Estimation}
     To mitigate this, they increase the variance as $t$ increases. They choose 
         $$q_{\mathcal{R}}(\cdot \mid x_0, t) = \exp \left(- \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 \right) \sim \mathcal{N}(\mathcal{R}(x_0), \Sigma_t I_d)$$
-    where $\Sigma_t$ is the same as the variance of $x_t$.
-    
-    Another solution $\rightarrow$ DDIM sampling.   
+    where $\Sigma_t$ is the variance of the forward process at time $t$. With this, we have 
+    \begin{align*}
+        -\mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0, t\right)\right] 
+        &= -\mathbb{E}_{x_0 \sim p_\theta}\left[-\frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 + C\right] \\
+        &\approx \frac{1}{2\Sigma_t} \mathbb{E}_{x_0 \sim p_\theta}\left[\|\mathcal{R}(x_0)\|^2\right] + C
+    \end{align*}
+    where $\Sigma_t$ is large for large $t$, hence the physics loss will be more impactful for small $t$. This makes sense, since for small $t$ the approximation $\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$ is better.
+\end{frame}
+
+\begin{frame}{DDIM Sampling}
+    Full inference via DDPM is expensive :( \\
+    \begin{center}
+        \begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{images/2026-02-11-00-14-31.png}
+\caption{With DDIM we don't need to run the full backwards process.}
+\label{fig:main-2026-02-11-00-14-31}
+\end{figure}
+    \end{center}
+The authors propose to use DDIM sampling with only a few steps to get a approximate sample of $p_\theta$.
 \end{frame}
 
 
@@ -203,10 +232,10 @@ $c > 0$ is a hyperparameter which controls the weight of the physics loss. \\
 
 \begin{frame}{Experimental Setup}
     They consider only one set of PDEs, namely the Darcy Flow equations given by 
-    \begin{align*}
-        u(x) = - K(x) \nabla p(x) \\
-        -\nabla \cdot u(x) = f(x) \\
-    \end{align*}
+\begin{align*}
+u(x) &= - K(x) \nabla p(x)  \quad &\text{ Constitutive law} \\
+-\nabla \cdot u(x) &= f(x) \quad &\text{ Conservation of mass}
+\end{align*}
     where $K$ is the permeability field, $p$ the pressure field and $f$ a source term. They describe fluid flow through porus media.
 \begin{figure}[h]
 \centering
