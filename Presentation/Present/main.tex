@@ -171,13 +171,12 @@ Thus the objective is given by
 \begin{frame}{Heuristic Solution to Mean Estimation}
     To mitigate this, they increase the variance as $t$ increases. They choose 
         $$q_{\mathcal{R}}(\cdot \mid x_0, t) = \exp \left(- \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 \right) \sim \mathcal{N}(\mathcal{R}(x_0), \Sigma_t I_d)$$
-    where $\Sigma_t$ is the variance of the forward process at time $t$. With this, we have 
-    \begin{align*}
-        -\mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0, t\right)\right] 
-        &= -\mathbb{E}_{x_0 \sim p_\theta}\left[-\frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 + C\right] \\
-        &\approx \frac{1}{2\Sigma_t} \mathbb{E}_{x_0 \sim p_\theta}\left[\|\mathcal{R}(x_0)\|^2\right] + C
-    \end{align*}
-    where $\Sigma_t$ is large for large $t$, hence the physics loss will be more impactful for small $t$. This makes sense, since for small $t$ the approximation $\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$ is better.
+    where $\Sigma_t$ is the variance of the forward process at time $t$. With this, the physics loss will be more impactful for small $t$. Why? \\
+    \bigbreak
+    \begin{center}
+    For small $t$ the approximation $\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$ is better. Less noisy!
+        
+    \end{center}
 \end{frame}
 
 \begin{frame}{DDIM Sampling}
@@ -190,7 +189,7 @@ Thus the objective is given by
 \label{fig:main-2026-02-11-00-14-31}
 \end{figure}
     \end{center}
-The authors propose to use DDIM sampling with only a few steps to get a approximate sample of $p_\theta$.
+The authors propose to use DDIM sampling with only a few steps to get a approximate sample of $p_\theta$. 
 \end{frame}
 
 
