@@ -160,27 +160,38 @@ Thus the objective is given by
     In classical diffusion training we have estimate as $$\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$$
     Then, in the classic loss we directly use that in our loss. 
     However, it holds $$\mathcal{R}(\hat{x}_0(x_t, t)) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$$
-    How can we estimate $\mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$ effectively?  
+    Where $$R(\hat{x}_0(x_t, t)) - \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t] \propto \text{Var}(x_0 \mid x_t) = \Sigma_t$$
 
     \bigbreak
     $\quad \longrightarrow$ Mitigate this effect by a appropriate choice of variance for $q_\mathcal{R}$. \\
-    $\quad \longrightarrow$ Use DDIM sampling to get $x_0 \sim p_\theta$ and then evaluate $\mathcal{R}$ on those.
 \end{frame}
 
 
 \begin{frame}{Heuristic Solution to Mean Estimation}
     To mitigate this, they increase the variance as $t$ increases. They choose 
         $$q_{\mathcal{R}}(\cdot \mid x_0, t) = \exp \left(- \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 \right) \sim \mathcal{N}(\mathcal{R}(x_0), \Sigma_t I_d)$$
-    where $\Sigma_t$ is the variance of the forward process at time $t$. With this, the physics loss will be more impactful for small $t$. Why? \\
+        With this, the physics loss will be more impactful for small $t$. Why? \\
     \bigbreak
+        $$–\log q_{\mathcal{R}}(0 \mid x_0, t) =  \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 + \text{const}$$
+
     \begin{center}
-    For small $t$ the approximation $\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$ is better. Less noisy!
-        
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Small $t$} & \textbf{Large $t$} \\
+        \hline
+        $\Sigma_t$ small & $\Sigma_t$ large \\
+        $1/\Sigma_t$ large & $1/\Sigma_t$ small \\
+        error small & error large \\
+        weight large & weight small \\
+        \hline
+    \end{tabular}
     \end{center}
 \end{frame}
 
 \begin{frame}{DDIM Sampling}
-    Full inference via DDPM is expensive :( \\
+    Full inference via DDPM is expensive, Mean estimation might not be accurate :( \\
+    $\quad \longrightarrow$ Use DDIM sampling to get $x_0 \sim p_\theta$ on which to evaluate the physics loss! \\
+
     \begin{center}
         \begin{figure}[h]
 \centering
