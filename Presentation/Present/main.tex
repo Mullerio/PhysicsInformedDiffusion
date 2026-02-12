@@ -92,6 +92,7 @@
         \[\mathcal{B}\left(u(\xi)\right) = 0 \quad \text{with} \quad \xi \in \partial \Omega.\]
         where $u : \Omega \rightarrow \mathbb{R}^c$ is the solution of interest. To simplify, we write \[R(u(\xi)) = [\mathcal{F}(u(\xi)), \mathcal{B}(u(\xi))]^\top\].
     \end{definition}
+    \pause
     They only consider $$[1,...,n] \times [1,...,n] \subseteq \mathbb{Z}_n \times \mathbb{Z}_n.$$
     Similar to standard image based diffusion models, data is then considered to be given as $x_0 \in \mathbb{R}^{c \times n \times n}$ and $\mathcal{F}, \mathcal{B}$ are discretized accordingly.
 \end{frame}
@@ -101,15 +102,17 @@
 \begin{frame}{Setting up Physics based Training Objective}
     The residual $\mathcal{R} = 0$ in the non discrete gives us an infinite amount of information. 
     To utilize this, we introduce a loss based on $\mathcal{R}$ via a \textit{virtual observable}.
-
     $$q_{\mathcal{R}}(\cdot \mid x_0) \sim \mathcal{N}(\mathcal{R}(x_0), \sigma^2 I_d)$$
 
+    \pause
 
     \begin{definition}
         Define $$p_\theta(\hat{r}) = \int_{\Omega} q_{\mathcal{R}}(\hat{r} \mid x_0) p_\theta(x_0) dx_0$$
         then we can optimize 
         $$ \arg \max_\theta \mathbb{E}_{\hat{r} \sim \delta_0}\left[\log p_\theta(\hat{r})\right]=\arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(\hat{r}=0 \mid x_0\right)\right] .$$
     \end{definition}
+    \pause
+
     So we can train our model by evaluating $x_0$ on the the virtual observable log likelihood.
     Note that this loss is equivalent to $$\arg \max_\theta \log p_\theta(0) = \arg \max _\theta \mathbb{E}_{x_0 \sim p_\theta}\left[\log q_{\mathcal{R}}\left(0 \mid x_0\right)\right]$$
 \end{frame}
@@ -130,7 +133,7 @@
 
 \begin{frame}{Introducing the Data Loss}
     How can we also accommodate a data loss? \\
-    $\rightarrow$ Simply add the standard diffusion objective!
+    \pause
 \begin{definition}
 Thus the objective is given by
 \[
@@ -146,18 +149,23 @@ Thus the objective is given by
 \]
 \end{definition}
 
+\pause
+
 2 main questions arise from this objective: \\
 
 \begin{enumerate}
     \item How do we optimize this objective? Sampling from $p_\theta$ is expensive. 
     \item How should we choose the $\sigma$ in $q_{\mathcal{R}}$?
-
 \end{enumerate}
+\pause
 
+We would want something like $$L(\theta) = \mathbb{E}_{t \sim U([0,T]), x_0 \sim p_{data}}\left[\lambda_t \| x_0 - \hat{x}_0(x_t, t)\|^2 + \mathcal{R}(x_0^*(x_t, t))\right]$$
+
+where $x_0^*(x_t, t)$ should be some approximation of a sample from $p_\theta$ given $x_t$.
 \end{frame}
 
 \begin{frame}{Problem 1: Mean Estimation}
-    In classical diffusion training we have estimate as $$\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$$
+    In classical diffusion training we have estimates $$\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$$
     Then, in the classic loss we directly use that in our loss. 
     However, it holds $$\mathcal{R}(\hat{x}_0(x_t, t)) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$$
     Where $$R(\hat{x}_0(x_t, t)) - \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t] \propto \text{Var}(x_0 \mid x_t) = \Sigma_t$$
@@ -171,9 +179,8 @@ Thus the objective is given by
     To mitigate this, they increase the variance as $t$ increases. They choose 
         $$q_{\mathcal{R}}(\cdot \mid x_0, t) = \exp \left(- \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 \right) \sim \mathcal{N}(\mathcal{R}(x_0), \Sigma_t I_d)$$
         With this, the physics loss will be more impactful for small $t$. Why? \\
-    \bigbreak
+    \pause    
         $$–\log q_{\mathcal{R}}(0 \mid x_0, t) =  \frac{1}{2\Sigma_t} \|\mathcal{R}(x_0)\|^2 + \text{const}$$
-
     \begin{center}
     \begin{tabular}{|c|c|}
         \hline
@@ -187,6 +194,7 @@ Thus the objective is given by
     \end{tabular}
     \end{center}
 \end{frame}
+
 
 \begin{frame}{DDIM Sampling}
     Full inference via DDPM is expensive, Mean estimation might not be accurate :( \\
@@ -231,6 +239,7 @@ The authors propose to use DDIM sampling with only a few steps to get a approxim
 \Until{converged or for fixed number of iterations}
 \end{algorithmic}
 \end{algorithm}
+\pause
 $c > 0$ is a hyperparameter which controls the weight of the physics loss. \\
 \textbf{Note:} The physics loss is just the log likelihood of the virtual observable!
 \end{frame}
@@ -247,7 +256,8 @@ u(x) &= - K(x) \nabla p(x)  \quad &\text{ Constitutive law} \\
 -\nabla \cdot u(x) &= f(x) \quad &\text{ Conservation of mass}
 \end{align*}
     where $K$ is the permeability field, $p$ the pressure field and $f$ a source term. They describe fluid flow through porus media.
-\begin{figure}[h]
+\pause
+    \begin{figure}[h]
 \centering
 \includegraphics[width=0.5\linewidth]{images/vecteezy_diagonal-cleaning-sponge-photo_65421531.png}
 \caption{A porus medium (sponge).}
@@ -263,9 +273,20 @@ u(x) &= - K(x) \nabla p(x)  \quad &\text{ Constitutive law} \\
 \end{figure}
 \end{frame}
 
+\begin{frame}
+    \begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{images/2026-02-12-16-26-07.png}
+\caption{Traing and residual loss comparison between standard and physics informed diffusion models.}
+\label{fig:main-2026-02-12-16-26-07}
+\end{figure}
+    
+\end{frame}
+
 \begin{frame}{Discussion}
      \begin{itemize}
         \item They only consider 2d data and PDEs on $\mathbb{R}^2$, how this works on higher dimensions is not tested. 
+        \item \pause
         \item The hyperparameter $c$ for the variance is crucial, choosing it too large leads to an overfocus on the residual and thus not sampling from the entire data distribution.
     \end{itemize}
     \begin{figure}[h]
