@@ -196,8 +196,8 @@ where $x_0^*(x_t, t)$ should be some approximation of a sample from $p_\theta$ g
 \end{frame}
 
 
-\begin{frame}{DDIM Sampling}
-    Full inference via DDPM is expensive, Mean estimation might not be accurate :( \\
+\begin{frame}{Sample estimation DDIM Sampling}
+    Full inference via DDPM is expensive, mean estimation might not be accurate :( \\
     $\quad \longrightarrow$ Use DDIM sampling to get $x_0 \sim p_\theta$ on which to evaluate the physics loss! \\
 
     \begin{center}
@@ -208,7 +208,7 @@ where $x_0^*(x_t, t)$ should be some approximation of a sample from $p_\theta$ g
 \label{fig:main-2026-02-11-00-14-31}
 \end{figure}
     \end{center}
-The authors propose to use DDIM sampling with only a few steps to get a approximate sample of $p_\theta$. 
+The authors propose to use DDIM sampling with only a few steps to get a approximate sample $x_0^*$of $p_\theta$. 
 \end{frame}
 
 
@@ -285,8 +285,7 @@ u(x) &= - K(x) \nabla p(x)  \quad &\text{ Constitutive law} \\
 
 \begin{frame}{Discussion}
      \begin{itemize}
-        \item They only consider 2d data and PDEs on $\mathbb{R}^2$, how this works on higher dimensions is not tested. 
-        \item \pause
+        \item They only consider 2d data and PDEs on $\mathbb{R}^2$, how this works on higher dimensions is not tested. \pause
         \item The hyperparameter $c$ for the variance is crucial, choosing it too large leads to an overfocus on the residual and thus not sampling from the entire data distribution.
     \end{itemize}
     \begin{figure}[h]
