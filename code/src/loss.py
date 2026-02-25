@@ -6,17 +6,6 @@ from typing import Optional
 from .networks import DiffusionSchedule
 from .diffusion import DiffusionSampler
 
-class MinSNRWeighting:
-    def __init__(self, gamma: float = 5.0):
-        self.gamma = gamma
-
-    def __call__(self, diffusion_schedule, t):
-        alpha_bar = diffusion_schedule.get_alphas_cumprod(t)
-        snr = alpha_bar / (1.0 - alpha_bar)
-        weight = torch.minimum(snr, torch.tensor(self.gamma, device=snr.device))
-        return weight
-
-
 def train_step(
     model: nn.Module,
     diffusion_schedule: DiffusionSchedule,
@@ -302,12 +291,9 @@ def physics_val_step(
         
         x_0_sample = None
         if use_ddim:
-            # Sample estimation: use DDIM to denoise from x_t back to x_0
             sampler = DiffusionSampler(model, diffusion_schedule, device, pred_type=prediction_type)
-            # Denoise from x_t at timestep t to x_0 using DDIM
             # Pass scalar timestep (t[0] since all elements are the same)
             x_0_sample = sampler.sample_ddim(x.shape, num_steps=ddim_steps, progress_bar=False, t=t[0], x_t=x_t)
-        # else: do nothing, use mean estimation
         
         model_out = model(x_t, t)
         if prediction_type == "x0":
@@ -321,7 +307,6 @@ def physics_val_step(
             # Data term: always compare prediction to actual data
             data_loss = (weights * (x0_pred - x) ** 2).mean()
             
-            # Physics residual: for sample estimation, use DDIM-denoised sample
             if use_ddim and x_0_sample is not None:
                 residual = residual_fn(x_0_sample)
             else:

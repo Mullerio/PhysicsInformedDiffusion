@@ -168,7 +168,7 @@ where $x_0^*(x_t, t)$ should be some approximation of a sample from $p_\theta$ g
     In classical diffusion training we have estimates $$\hat{x}_0(x_t, t) \approx \mathbb{E}[x_0 \mid x_t]$$
     Then, in the classic loss we directly use that in our loss. 
     However, it holds $$\mathcal{R}(\hat{x}_0(x_t, t)) \approx \mathcal{R}(\mathbb{E}[x_0 \mid x_t]) \neq \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t]$$
-    Where $$R(\hat{x}_0(x_t, t)) - \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t] \propto \text{Var}(x_0 \mid x_t) = \Sigma_t$$
+    Where $$R(\hat{x}_0(x_t, t)) - \mathbb{E}[\mathcal{R}(x_0)  \mid  x_t] \propto \text{Var}(x_0 \mid x_t) \sim \Sigma_t$$
 
     \bigbreak
     $\quad \longrightarrow$ Mitigate this effect by a appropriate choice of variance for $q_\mathcal{R}$. \\
